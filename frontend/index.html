@@ -150,17 +150,18 @@
   These are intentionally conservative to match dataset sampling areas.
 */
 const stateRanges = {
-  "Madhya Pradesh": {lat:[20.5,26.9], lon:[74.0,82.0]},
-  "Uttarakhand":    {lat:[28.0,31.3], lon:[77.5,81.0]},
-  "Rajasthan":      {lat:[23.3,30.1], lon:[69.3,78.0]},
-  "West Bengal":    {lat:[21.5,27.2], lon:[87.9,89.9]}, // focused on wildlife areas
-  "Assam":          {lat:[24.0,28.0], lon:[89.5,96.0]},
-  "Kerala":         {lat:[8.0,12.7],  lon:[74.5,77.8]},
-  "Gujarat":        {lat:[20.0,24.7], lon:[68.1,74.4]},
-  "Karnataka":      {lat:[11.5,18.5], lon:[74.0,78.5]},
-  "Odisha":         {lat:[17.5,22.5], lon:[81.0,87.5]},
-  "Himachal Pradesh": {lat:[30.3,33.5], lon:[75.0,79.5]}
+  "Assam":             {lat:[24.1793, 28.7293], lon:[91.1351, 95.1843]},
+  "Gujarat":           {lat:[20.6742, 24.1503], lon:[69.4059, 73.0288]},
+  "Himachal Pradesh":  {lat:[29.6463, 33.4447], lon:[74.6491, 78.4641]},
+  "Karnataka":         {lat:[13.2367, 17.3336], lon:[73.9850, 77.8989]},
+  "Kerala":            {lat:[8.2183, 12.4075],  lon:[74.2017, 78.3782]},
+  "Madhya Pradesh":    {lat:[19.9267, 24.2686], lon:[76.3461, 79.9605]},
+  "Odisha":            {lat:[18.4529, 22.4759], lon:[83.8550, 87.6928]},
+  "Rajasthan":         {lat:[24.0967, 27.8451], lon:[70.9231, 74.6447]},
+  "Uttarakhand":       {lat:[28.0152, 31.8810], lon:[77.0423, 80.9724]},
+  "West Bengal":       {lat:[21.0603, 25.1401], lon:[86.0419, 89.6897]}
 };
+
 
 const backendUrl = "https://anti-poaching-project.onrender.com/predict"; // ensure HTTPS
 
@@ -221,16 +222,19 @@ function validateLatLon(){
   if (!s) { showError("Please select a state."); return false; }
   const lat = Number(latInput.value);
   const lon = Number(lonInput.value);
-  if (!isFinite(lat) || !isFinite(lon)) { showError("Please enter numeric latitude and longitude."); return false; }
+  if (!isFinite(lat) || !isFinite(lon)) { showError("Enter numeric lat & lon."); return false; }
   const r = stateRanges[s];
-  if (!r) { showError("State ranges are not available."); return false; }
+  if (!r) { showError("State ranges not available."); return false; }
   if (lat < r.lat[0] || lat > r.lat[1] || lon < r.lon[0] || lon > r.lon[1]) {
-    showError(`Latitude/longitude outside typical ${s} range. Lat must be ${r.lat[0]}–${r.lat[1]}. Lon must be ${r.lon[0]}–${r.lon[1]}.`);
-    return false;
+    // show a non-fatal warning instead of blocking
+    showError(`Warning: Lat/lon are outside typical ${s} range. Submission allowed.`);
+    // optionally color the errorBox differently or change wording
+    return true; // allow submission
   }
   clearError();
   return true;
 }
+
 
 /* Main prediction: validate lat/lon, then build payload using only the model's expected fields.
    We do NOT send latitude/longitude to the backend (maintains API schema compatibility).
