@@ -1,175 +1,133 @@
 # --- Add these imports near the top of src/api/app.py ---
+import numpy as np
+import pandas as pd
 import shap
-from typing import List
-from src.preprocess import ALL_FEATURES, NUMERIC_FEATURES, CATEGORICAL_FEATURES
+
+from fastapi import HTTPException
+
+from src.preprocess import (
+    ALL_FEATURES,
+    NUMERIC_FEATURES,
+    CATEGORICAL_FEATURES
+)
+
 # -------------------------------------------------------------------
 
 # --- After your existing /predict endpoint code, add this new endpoint ---
 
 def _get_transformed_feature_names(preprocessor):
     """
-    Returns the list of transformed feature names (numeric first, then categorical one-hot names)
-    Assumes ColumnTransformer with ('num', ..., NUMERIC_FEATURES) and ('cat', ..., CATEGORICAL_FEATURES)
+    Returns transformed feature names in the same order
+    as PREPROC.transform() output.
     """
     names = []
-    # numeric features first
+
+    # numeric features (same order)
     names.extend(NUMERIC_FEATURES)
 
-    # categorical encoder
-    try:
-        cat_transformer = preprocessor.named_transformers_["cat"]
-        encoder = cat_transformer.named_steps["encoder"]
-        categories = encoder.categories_
-        for feat_name, cats in zip(CATEGORICAL_FEATURES, categories):
-            for cat_val in cats:
-                # use a clear separator
-                names.append(f"{feat_name}__{cat_val}")
-    except Exception:
-        # fallback: create generic names for categories (best-effort)
-        for feat_name in CATEGORICAL_FEATURES:
-            names.append(f"{feat_name}__unknown")
+    # categorical one-hot features
+    cat_pipe = preprocessor.named_transformers_.get("cat")
+    if cat_pipe:
+        encoder = cat_pipe.named_steps.get("encoder")
+        if encoder:
+            cat_names = encoder.get_feature_names_out(CATEGORICAL_FEATURES)
+            names.extend(cat_names.tolist())
+
     return names
+
 
 def _map_shap_to_original(shap_vals_row, transformed_names):
     """
-    Map the shap values for transformed features back to original features:
-    - numeric features map 1:1
-    - categorical one-hot features are summed per categorical original feature
-    Returns dict {original_feature: contribution_value}
+    Aggregate SHAP values back to original features.
+    Numeric features map 1:1.
+    Categorical one-hot features are summed.
     """
     contributions = {}
-    # numeric features
+
+    # numeric
     for i, feat in enumerate(NUMERIC_FEATURES):
         contributions[feat] = float(shap_vals_row[i])
 
-    # categorical features
-    # transformed names after numeric start at index = len(NUMERIC_FEATURES)
+    # categorical
     offset = len(NUMERIC_FEATURES)
-    for tn in transformed_names[offset:]:
-        # tn looks like "species__Tiger"
-        if "__" in tn:
-            orig, val = tn.split("__", 1)
-        else:
-            orig = tn
-        contributions.setdefault(orig, 0.0)
-    # now sum actual values
-    for idx, tn in enumerate(transformed_names[offset:], start=offset):
+    for idx, name in enumerate(transformed_names[offset:], start=offset):
         val = float(shap_vals_row[idx])
-        if "__" in tn:
-            orig, _ = tn.split("__", 1)
+        if "__" in name:
+            orig = name.split("__")[0]
         else:
-            orig = tn
+            orig = name
         contributions[orig] = contributions.get(orig, 0.0) + val
+
     return contributions
 
 @app.post("/explain")
 def explain(req: PredictRequest):
     """
-    Return a local SHAP explanation for the single input.
-    Response:
-      {
-        "base_value": float,
-        "top_features": [
-           {"feature":"poacher_signs_count", "contribution": -0.123, "abs": 0.123},
-           ...
-        ],
-        "all_contributions": {"species": 0.1, "poacher_signs_count": -0.2, ...}
-      }
+    Returns SHAP-based explanation for a single prediction.
     """
+
     if MODEL is None or PREPROC is None:
-        raise HTTPException(status_code=503, detail="Model or preprocessor not available")
+        raise HTTPException(status_code=503, detail="Model not loaded")
 
+    # Build input DataFrame
     payload = req.dict()
-    # Build dataframe with expected columns
     df = pd.DataFrame([payload])
-    # Ensure ordering and presence of ALL_FEATURES
-    try:
-        df = df.reindex(columns=ALL_FEATURES)
-    except Exception:
-        df = df.reindex(columns=ALL_FEATURES, fill_value=np.nan)
+    df = df.reindex(columns=ALL_FEATURES)
 
-    # transform into model input
+    # Transform input
     try:
-        X = PREPROC.transform(df[ALL_FEATURES])
+        X = PREPROC.transform(df)
     except Exception as e:
-        logger.exception("Preprocessing failed for explain")
         raise HTTPException(status_code=500, detail=f"Preprocessing error: {e}")
 
-    # prepare/cached explainer
-    try:
-        explainer = getattr(MODEL, "__explainer__", None)
-        if explainer is None:
-            # Try TreeExplainer first (fast for tree models), else fallback to generic Explainer
-            try:
-                explainer = shap.TreeExplainer(MODEL)
-            except Exception:
-                explainer = shap.Explainer(MODEL)
-            MODEL.__explainer__ = explainer
-    except Exception as e:
-        logger.exception("Failed to create SHAP explainer")
-        raise HTTPException(status_code=500, detail=f"Explainer error: {e}")
+    # Build / cache SHAP explainer
+    if not hasattr(MODEL, "__shap_explainer__"):
+        try:
+            MODEL.__shap_explainer__ = shap.TreeExplainer(MODEL)
+        except Exception:
+            MODEL.__shap_explainer__ = shap.Explainer(MODEL)
 
-    # compute SHAP values for this single sample (fast)
+    explainer = MODEL.__shap_explainer__
+
+    # Compute SHAP values
     try:
-        shap_out = explainer(X)  # shap.Explanation or array-like depending on version
-        # extract numeric array of shap values
-        if hasattr(shap_out, "values"):
-            shap_vals = shap_out.values
-        else:
-            # fallback: try shap_values
-            shap_vals = explainer.shap_values(X)
+        shap_values = explainer.shap_values(X)
     except Exception as e:
-        logger.exception("SHAP computation failed")
         raise HTTPException(status_code=500, detail=f"SHAP error: {e}")
 
-    # shap_vals shape handling:
-    # If shap_vals is a list (multi-output), pick index 1 if binary classifier (probability for positive class),
-    # otherwise pick first.
-    try:
-        if isinstance(shap_vals, list):
-            # Choose the array with shape matching X's features dimension
-            # For binary classifier, shap_values[1] often corresponds to positive class
-            if len(shap_vals) == 2:
-                shap_arr = np.array(shap_vals[1])
-            else:
-                shap_arr = np.array(shap_vals[0])
-        else:
-            shap_arr = np.array(shap_vals)
-    except Exception:
-        shap_arr = np.array(shap_vals)
+    # Binary classifier handling
+    if isinstance(shap_values, list):
+        # positive class
+        shap_arr = np.array(shap_values[1])
+        base_value = explainer.expected_value[1]
+    else:
+        shap_arr = np.array(shap_values)
+        base_value = explainer.expected_value
 
-    # ensure we have 2D array [n_samples, n_transformed_features]
-    if shap_arr.ndim == 1:
-        shap_arr = shap_arr.reshape(1, -1)
+    shap_arr = shap_arr.reshape(1, -1)
 
-    # transformed feature names (numeric + categorical one-hot)
-    try:
-        transformed_names = _get_transformed_feature_names(PREPROC)
-    except Exception:
-        # fallback: use ALL_FEATURES (not exact if one-hot used)
-        transformed_names = ALL_FEATURES
+    # Feature names
+    transformed_names = _get_transformed_feature_names(PREPROC)
 
-    # Map back to original features and sum one-hot contributions per categorical feature
+    # Aggregate back to original features
     contributions = _map_shap_to_original(shap_arr[0], transformed_names)
 
-    # Build top features sorted by absolute contribution
-    top = sorted(
-        [{"feature": k, "contribution": float(v), "abs": abs(float(v))} for k, v in contributions.items()],
-        key=lambda x: x["abs"], reverse=True
+    # Sort by absolute contribution
+    top_features = sorted(
+        [
+            {
+                "feature": k,
+                "contribution": float(v),
+                "abs": abs(float(v))
+            }
+            for k, v in contributions.items()
+        ],
+        key=lambda x: x["abs"],
+        reverse=True
     )
 
-    # include base / expected value if available
-    base_value = None
-    try:
-        if hasattr(explainer, "expected_value"):
-            base_value = float(explainer.expected_value if not isinstance(explainer.expected_value, (list, tuple)) else explainer.expected_value[0])
-        elif hasattr(shap_out, "base_values"):
-            base_value = float(shap_out.base_values.tolist()[0])
-    except Exception:
-        base_value = None
-
     return {
-        "base_value": base_value,
-        "top_features": top[:8],      # return top 8 contributors
+        "base_value": float(base_value),
+        "top_features": top_features[:8],
         "all_contributions": contributions
     }

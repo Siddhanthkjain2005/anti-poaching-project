@@ -4,13 +4,14 @@
   <meta charset="utf-8" />
   <title>Anti-Poaching Risk Prediction</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <!-- Leaflet CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-sA+e2kGZk2kG2xg9e6Yf8w1gP1mYgX5eJ6hB0v3f4Tg=" crossorigin=""/>
+
+  <!-- Leaflet CSS (no integrity to avoid silent load failures) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
   <style>
     body { font-family: Inter, system-ui, Arial, sans-serif; background:linear-gradient(135deg,#0f766e,#042f2e); color:#0f172a; margin:0; padding:24px; min-height:100vh; }
     .container { max-width:1100px; margin:auto; }
-    h1 { text-align:center; color:#ecfeff; }
+    h1 { text-align:center; color:#ecfeff; margin:0 0 6px; }
     .subtitle { text-align:center; color:#ccfbf1; margin-bottom:10px; }
     .card { background:#fff; border-radius:12px; padding:18px; box-shadow:0 10px 24px rgba(0,0,0,0.12); }
     .grid { display:grid; grid-template-columns: 1fr 420px; gap:16px; align-items:start; }
@@ -20,7 +21,7 @@
     select,input{width:100%; padding:8px 10px; margin-top:6px; border-radius:8px; border:1px solid #cbd5f5; font-size:14px}
     button{padding:10px 12px;border-radius:8px;border:none;background:#0d9488;color:#fff;font-weight:700;cursor:pointer}
     button.secondary{background:#f1f5f9;color:#0f172a;border:1px solid #cbd5f5}
-    #map { height: 360px; border-radius:8px; }
+    #map { width: 100%; height: 360px; min-height: 240px; border-radius:8px; }
     .result { margin-top:8px;padding:12px;border-radius:8px; display:none; }
     .low{background:#ecfeff;border-left:6px solid #0d9488}
     .high{background:#fff1f2;border-left:6px solid #dc2626}
@@ -47,12 +48,30 @@
             <div class="form-grid">
               <div>
                 <label>Species</label>
-                <select name="species"><option>Tiger</option><option>Elephant</option><option>Rhino</option><option>Leopard</option><option>Pangolin</option></select>
+                <select name="species">
+                  <option>Tiger</option>
+                  <option>Elephant</option>
+                  <option>Rhino</option>
+                  <option>Leopard</option>
+                  <option>Pangolin</option>
+                </select>
               </div>
+
               <div>
                 <label>State</label>
-                <select name="state" id="stateSelect"><option value="">-- Select state --</option>
-<option>Madhya Pradesh</option><option>Uttarakhand</option><option>Rajasthan</option><option>West Bengal</option><option>Assam</option><option>Kerala</option><option>Gujarat</option><option>Karnataka</option><option>Odisha</option><option>Himachal Pradesh</option></select>
+                <select name="state" id="stateSelect">
+                  <option value="">-- Select state --</option>
+                  <option>Madhya Pradesh</option>
+                  <option>Uttarakhand</option>
+                  <option>Rajasthan</option>
+                  <option>West Bengal</option>
+                  <option>Assam</option>
+                  <option>Kerala</option>
+                  <option>Gujarat</option>
+                  <option>Karnataka</option>
+                  <option>Odisha</option>
+                  <option>Himachal Pradesh</option>
+                </select>
                 <small id="stateHint" class="muted">Choose state to show lat/lon range</small>
               </div>
 
@@ -60,6 +79,7 @@
                 <label>Latitude</label>
                 <input type="number" step="0.0001" id="latitude" name="latitude" placeholder="Click map or enter value" />
               </div>
+
               <div>
                 <label>Longitude</label>
                 <input type="number" step="0.0001" id="longitude" name="longitude" placeholder="Click map or enter value" />
@@ -69,6 +89,7 @@
                 <label>Time of Day</label>
                 <select name="time_of_day"><option>Morning</option><option>Afternoon</option><option>Night</option></select>
               </div>
+
               <div>
                 <label>Terrain Type</label>
                 <select name="terrain_type"><option>Forest</option><option>Grassland</option><option>Wetland</option><option>Mountain</option><option>Scrub</option></select>
@@ -78,6 +99,7 @@
                 <label>Distance to Village (km)</label>
                 <input type="number" step="0.1" name="proximity_to_village_km" value="3" />
               </div>
+
               <div>
                 <label>Distance to Road (km)</label>
                 <input type="number" step="0.1" name="distance_to_road_km" value="5" />
@@ -87,6 +109,7 @@
                 <label>Patrol in Last 24 Hours</label>
                 <select name="patrol_presence_last_24h"><option value="1">Yes</option><option value="0">No</option></select>
               </div>
+
               <div>
                 <label>Camera Trap Present</label>
                 <select name="camera_trap_present"><option value="1">Yes</option><option value="0">No</option></select>
@@ -96,6 +119,7 @@
                 <label>Past Poaching Incidents</label>
                 <input type="number" name="past_poaching_incidents" value="0" />
               </div>
+
               <div>
                 <label>Poacher Signs Count</label>
                 <input type="number" name="poacher_signs_count" value="0" />
@@ -105,6 +129,7 @@
                 <label>Market Value (USD)</label>
                 <input type="number" name="market_value_usd" value="2000" />
               </div>
+
               <div>
                 <label>Community Awareness (1–10)</label>
                 <input type="number" min="1" max="10" name="community_awareness_score" value="6" />
@@ -140,12 +165,11 @@
     <div class="footer">ML-powered anti-poaching decision support • Academic prototype</div>
   </div>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-V4i9Qzqg3z6ZZ3cIu3EwGx6g2v7q7Q1l7fF6g5Yw0Rk=" crossorigin=""></script>
+  <!-- Leaflet JS (no integrity to avoid silent load issues) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-/* ---------- config ---------- */
+/* ---------- configuration ---------- */
 const backendPredict = "https://anti-poaching-project.onrender.com/predict";
 const backendExplain = "https://anti-poaching-project.onrender.com/explain";
 
@@ -163,7 +187,7 @@ const stateRanges = {
   "West Bengal":       {lat:[21.0603, 25.1401], lon:[86.0419, 89.6897]}
 };
 
-/* ---------- helpers & DOM ---------- */
+/* ---------- DOM references ---------- */
 const stateSelect = document.getElementById("stateSelect");
 const latInput = document.getElementById("latitude");
 const lonInput = document.getElementById("longitude");
@@ -174,6 +198,7 @@ const resultBox = document.getElementById("result");
 const explainBox = document.getElementById("explainBox");
 const explainList = document.getElementById("explainList");
 
+/* ---------- state -> UI ---------- */
 stateSelect.addEventListener("change", () => {
   const s = stateSelect.value;
   if (!s || !stateRanges[s]) {
@@ -186,11 +211,10 @@ stateSelect.addEventListener("change", () => {
   stateHint.textContent = `Lat/lon shown for ${s}. Clicking map sets coordinates.`;
 });
 
-/* ---------- Map ---------- */
+/* ---------- map initialization ---------- */
 const map = L.map('map').setView([22.5, 78.0], 5);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 18,
-  attribution: '&copy; OpenStreetMap contributors'
+  maxZoom: 18, attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
 
 let marker = null;
@@ -202,7 +226,10 @@ map.on('click', function(e) {
   lonInput.value = lng.toFixed(6);
 });
 
-/* ---------- utils ---------- */
+// fix rendering if map initially hidden or in flexible layout
+setTimeout(()=>{ try { map.invalidateSize(); } catch(e){} }, 250);
+
+/* ---------- helpers ---------- */
 function showError(msg){
   errorBox.style.display = "block";
   errorBox.textContent = msg;
@@ -240,29 +267,29 @@ function fillRandomLocation(){
 /* open docs in new tab */
 function openDocs(){ window.open(backendPredict.replace("/predict","/docs"), "_blank"); }
 
-/* ---------- validate lat/lon (warn not block) ---------- */
-function validateLatLonWarn(){
+/* ---------- validation: BLOCK if out-of-range ---------- */
+function validateLatLonBlock(){
   const s = stateSelect.value;
-  if (!s) { showError("Please select a state"); return false; }
+  if (!s) { showError("Please select a state."); return false; }
   const lat = Number(latInput.value), lon = Number(lonInput.value);
-  if (!isFinite(lat) || !isFinite(lon)) { showError("Enter numeric latitude & longitude"); return false; }
+  if (!isFinite(lat) || !isFinite(lon)) { showError("Enter numeric latitude & longitude."); return false; }
   const r = stateRanges[s];
-  if (!r) { showError("No lat/lon range for state"); return true; }
+  if (!r) { showError("State ranges not available."); return false; }
   if (lat < r.lat[0] || lat > r.lat[1] || lon < r.lon[0] || lon > r.lon[1]) {
-    // show warning but allow submission
-    showError(`Warning: Lat/lon outside typical ${s} range. Submission allowed.`);
-    return true;
+    showError(`Latitude/longitude are outside the typical range for ${s}. Please enter values within: Lat ${r.lat[0]}–${r.lat[1]}, Lon ${r.lon[0]}–${r.lon[1]}.`);
+    return false; // BLOCK submission
   }
   clearError();
   return true;
 }
 
-/* ---------- build payload from form and lat/lon ---------- */
+/* build payload from form and lat/lon */
 function buildPayload() {
   const form = document.getElementById("riskForm");
   const data = Object.fromEntries(new FormData(form).entries());
-  // convert numeric
-  ["proximity_to_village_km","distance_to_road_km","past_poaching_incidents","poacher_signs_count","market_value_usd","community_awareness_score","patrol_presence_last_24h","camera_trap_present"].forEach(k => { if (data[k] !== undefined) data[k] = Number(data[k]) });
+  // convert numeric fields
+  ["proximity_to_village_km","distance_to_road_km","past_poaching_incidents","poacher_signs_count","market_value_usd","community_awareness_score","patrol_presence_last_24h","camera_trap_present"]
+    .forEach(k => { if (data[k] !== undefined) data[k] = Number(data[k]); });
   // add lat/lon
   data.latitude = Number(latInput.value);
   data.longitude = Number(lonInput.value);
@@ -272,7 +299,8 @@ function buildPayload() {
 /* ---------- call predict, then explain ---------- */
 async function doPredict(){
   clearResult();
-  if (!validateLatLonWarn()) return;
+  clearError();
+  if (!validateLatLonBlock()) return;
 
   const payload = buildPayload();
   const btn = document.getElementById("predictBtn");
@@ -294,7 +322,7 @@ async function doPredict(){
     const high = risk >= 0.5;
     showResultHtml(`<strong>Risk Score:</strong> ${risk.toFixed(3)}<br/><strong>Prediction:</strong> ${high ? "HIGH RISK" : "LOW RISK"}<br/><small class="muted">Model: ${j.model_version || "v1"}</small>`, high);
 
-    // now ask for an explanation
+    // request explanation (non-fatal)
     try {
       const exRes = await fetch(backendExplain, {
         method: "POST",
@@ -305,16 +333,16 @@ async function doPredict(){
         const ex = await exRes.json();
         renderExplanation(ex);
       } else {
-        // ignore explanation error (non-fatal)
+        // explanation failed — show a small console warning but do not block
         console.warn("Explain failed", await exRes.text());
       }
     } catch (err) {
-      console.warn("Explain request failed", err);
+      console.warn("Explain request error", err);
     }
 
   } catch (err) {
     console.error(err);
-    showError("Prediction failed. Backend may be sleeping or unreachable.");
+    showError("Prediction failed. Backend may be sleeping or unreachable. Check /docs for details.");
   } finally {
     btn.textContent = oldText; btn.disabled = false;
   }
@@ -337,7 +365,7 @@ function renderExplanation(ex) {
     // scale fraction (0..1)
     const frac = Math.min(1, Math.abs(item.contribution) / maxAbs);
     fill.style.width = `${Math.round(frac*100)}%`;
-    // positive -> push higher risk, color green-ish; negative -> push lower, color red-ish
+    // positive -> push higher risk (green); negative -> push lower (red)
     fill.style.background = item.contribution >= 0 ? "#10b981" : "#ef4444";
     vis.appendChild(fill);
     const txt = document.createElement("div"); txt.style.minWidth="80px"; txt.style.textAlign="right"; txt.style.fontSize="12px"; txt.style.color="#334155";
@@ -347,13 +375,17 @@ function renderExplanation(ex) {
   });
 }
 
-/* ---------- initial map marker from default inputs (if present) ---------- */
+/* init marker if there are default coords present in inputs */
 (function init() {
   const lat = parseFloat(latInput.value), lon = parseFloat(lonInput.value);
   if (isFinite(lat) && isFinite(lon)) {
     const ll = L.latLng(lat, lon);
     marker = L.marker(ll).addTo(map);
     map.setView(ll, 9);
+    setTimeout(()=>{ try { map.invalidateSize(); } catch(e){} }, 150);
+  } else {
+    // ensure map displays correctly
+    setTimeout(()=>{ try { map.invalidateSize(); } catch(e){} }, 250);
   }
 })();
 </script>

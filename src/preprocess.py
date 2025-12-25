@@ -1,10 +1,18 @@
 # src/preprocess.py
+
+import numpy as np
+
+from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 
-# Categorical features (unchanged)
+
+# ----------------------------------------------------------------------
+# Feature definitions
+# ----------------------------------------------------------------------
+
 CATEGORICAL_FEATURES = [
     "species",
     "state",
@@ -12,7 +20,6 @@ CATEGORICAL_FEATURES = [
     "terrain_type"
 ]
 
-# Numeric features - add latitude & longitude here
 NUMERIC_FEATURES = [
     "proximity_to_village_km",
     "distance_to_road_km",
@@ -23,13 +30,20 @@ NUMERIC_FEATURES = [
     "patrol_presence_last_24h",
     "camera_trap_present",
     "latitude",
-    "longitude"
+    "longitude",
+    "nightlight",
+    "ndvi",
+    "elevation"
 ]
 
-# Combined
 ALL_FEATURES = CATEGORICAL_FEATURES + NUMERIC_FEATURES
 
-# Optional: state -> lat/lon ranges (same ranges used in frontend)
+NIGHTLIGHT_INDEX = NUMERIC_FEATURES.index("nightlight")
+
+
+# ----------------------------------------------------------------------
+# Optional: state lat/lon ranges (frontend validation)
+# ----------------------------------------------------------------------
 STATE_RANGES = {
     "Assam":             {"lat":[24.1793, 28.7293], "lon":[91.1351, 95.1843]},
     "Gujarat":           {"lat":[20.6742, 24.1503], "lon":[69.4059, 73.0288]},
@@ -44,25 +58,43 @@ STATE_RANGES = {
 }
 
 
+# ----------------------------------------------------------------------
+# Custom transformer for nightlight
+# ----------------------------------------------------------------------
+class NightlightLogTransformer(BaseEstimator, TransformerMixin):
+    def __init__(self, nightlight_index: int):
+        self.nightlight_index = nightlight_index
 
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X = X.copy()
+        X[:, self.nightlight_index] = np.log1p(
+            np.clip(X[:, self.nightlight_index], 0, None)
+        )
+        return X
+
+
+# ----------------------------------------------------------------------
+# Build preprocessing pipeline
+# ----------------------------------------------------------------------
 def build_preprocessor():
-    """
-    Returns a ColumnTransformer preprocessor that imputes & scales numeric features
-    and imputes & one-hot-encodes categorical features.
-    """
-    num_pipeline = Pipeline([
+
+    numeric_pipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="median")),
+        ("nightlight_log", NightlightLogTransformer(NIGHTLIGHT_INDEX)),
         ("scaler", StandardScaler())
     ])
 
-    cat_pipeline = Pipeline([
+    categorical_pipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="most_frequent")),
         ("encoder", OneHotEncoder(handle_unknown="ignore"))
     ])
 
     preprocessor = ColumnTransformer([
-        ("num", num_pipeline, NUMERIC_FEATURES),
-        ("cat", cat_pipeline, CATEGORICAL_FEATURES)
+        ("num", numeric_pipeline, NUMERIC_FEATURES),
+        ("cat", categorical_pipeline, CATEGORICAL_FEATURES)
     ])
 
     return preprocessor
