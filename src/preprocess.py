@@ -8,7 +8,6 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from sklearn.impute import SimpleImputer
 
-
 # ----------------------------------------------------------------------
 # Feature definitions
 # ----------------------------------------------------------------------
@@ -62,17 +61,20 @@ STATE_RANGES = {
 # Custom transformer for nightlight
 # ----------------------------------------------------------------------
 class NightlightLogTransformer(BaseEstimator, TransformerMixin):
-    def __init__(self, nightlight_index: int):
+    def __init__(self, nightlight_index: int = NIGHTLIGHT_INDEX):
         self.nightlight_index = nightlight_index
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
+        # X is expected to be a 2D numpy array (numeric pipeline receives arrays)
         X = X.copy()
-        X[:, self.nightlight_index] = np.log1p(
-            np.clip(X[:, self.nightlight_index], 0, None)
-        )
+        # guard: if index out of bounds, don't crash
+        if 0 <= self.nightlight_index < X.shape[1]:
+            X[:, self.nightlight_index] = np.log1p(
+                np.clip(X[:, self.nightlight_index], 0, None)
+            )
         return X
 
 
@@ -89,7 +91,7 @@ def build_preprocessor():
 
     categorical_pipeline = Pipeline([
         ("imputer", SimpleImputer(strategy="most_frequent")),
-        ("encoder", OneHotEncoder(handle_unknown="ignore"))
+        ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
     ])
 
     preprocessor = ColumnTransformer([
