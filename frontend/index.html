@@ -1,144 +1,55 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <title>Anti-Poaching Risk Prediction</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <style>
-    body {
-      font-family: "Inter", system-ui, Arial, sans-serif;
-      background: linear-gradient(135deg, #0f766e, #042f2e);
-      min-height: 100vh;
-      margin: 0;
-      padding: 24px;
-      color: #0f172a;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
-    }
-
-    h1 {
-      text-align: center;
-      color: #ecfeff;
-      margin-bottom: 6px;
-    }
-
-    .subtitle {
-      text-align: center;
-      color: #ccfbf1;
-      margin-bottom: 24px;
-    }
-
-    .card {
-      background: #ffffff;
-      border-radius: 14px;
-      padding: 22px;
-      box-shadow: 0 12px 30px rgba(0,0,0,0.15);
-    }
-
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 14px;
-    }
-
-    label {
-      font-weight: 600;
-      font-size: 14px;
-    }
-
-    small {
-      display: block;
-      font-size: 12px;
-      color: #475569;
-      margin-top: 2px;
-    }
-
-    select, input {
-      width: 100%;
-      padding: 8px 10px;
-      margin-top: 4px;
-      border-radius: 8px;
-      border: 1px solid #cbd5f5;
-      font-size: 14px;
-    }
-
-    button {
-      width: 100%;
-      margin-top: 18px;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      background: #0d9488;
-      color: white;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    button:hover {
-      background: #0f766e;
-    }
-
-    .result {
-      margin-top: 20px;
-      padding: 16px;
-      border-radius: 12px;
-      display: none;
-    }
-
-    .low {
-      background: #ecfeff;
-      border-left: 6px solid #0d9488;
-    }
-
-    .high {
-      background: #fff1f2;
-      border-left: 6px solid #dc2626;
-    }
-
-    .footer {
-      margin-top: 18px;
-      text-align: center;
-      font-size: 12px;
-      color: #475569;
-    }
+    body { font-family: Inter, system-ui, Arial, sans-serif; background:linear-gradient(135deg,#0f766e,#042f2e); color:#0f172a; margin:0; padding:24px; min-height:100vh; }
+    .container { max-width:960px; margin:auto; }
+    h1 { text-align:center; color:#ecfeff; margin-bottom:6px; }
+    .subtitle { text-align:center; color:#ccfbf1; margin-bottom:18px; }
+    .card { background:#fff; border-radius:14px; padding:22px; box-shadow:0 12px 30px rgba(0,0,0,0.15); }
+    .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:12px; }
+    label{font-weight:600; font-size:14px}
+    small{display:block;font-size:12px;color:#475569;margin-top:4px}
+    select,input{width:100%; padding:8px 10px; margin-top:6px; border-radius:8px; border:1px solid #cbd5f5; font-size:14px}
+    .row { display:flex; gap:10px; align-items:center; }
+    .helper { font-size:13px; color:#334155; margin-top:6px; }
+    button { width:100%; margin-top:16px; padding:12px; border-radius:10px; border:none; background:#0d9488; color:white; font-size:16px; font-weight:600; cursor:pointer; }
+    button:hover{background:#0f766e}
+    .result{margin-top:16px;padding:14px;border-radius:10px;display:none}
+    .low{background:#ecfeff;border-left:6px solid #0d9488}
+    .high{background:#fff1f2;border-left:6px solid #dc2626}
+    .footer{margin-top:18px;text-align:center;font-size:12px;color:#475569}
+    .muted{color:#64748b;font-size:13px}
+    .inline-btn{padding:8px 10px;border-radius:8px;border:1px solid #cbd5f5;background:#f8fafc;cursor:pointer}
+    .error{color:#991b1b;font-weight:600;margin-top:8px}
   </style>
 </head>
-
 <body>
   <div class="container">
     <h1>🐾 Anti-Poaching Risk Prediction</h1>
-    <p class="subtitle">
-      Enter field observations to estimate wildlife poaching risk
-    </p>
+    <p class="subtitle">Enter observations to estimate poaching risk. Provide location (state + lat/lon) for realistic inputs.</p>
 
     <div class="card">
-      <form id="riskForm">
+      <form id="riskForm" onsubmit="return false;">
         <div class="grid">
 
           <div>
             <label>Species</label>
             <select name="species">
-              <option>Tiger</option>
-              <option>Elephant</option>
-              <option>Rhino</option>
-              <option>Leopard</option>
-              <option>Pangolin</option>
-              <option>Asiatic Lion</option>
-              <option>Snow Leopard</option>
-              <option>Gaur</option>
-              <option>Nilgai</option>
-              <option>Sambar</option>
+              <option>Tiger</option><option>Elephant</option><option>Rhino</option>
+              <option>Leopard</option><option>Pangolin</option><option>Asiatic Lion</option>
+              <option>Snow Leopard</option><option>Gaur</option><option>Nilgai</option><option>Sambar</option>
             </select>
+            <small class="muted">Species observed</small>
           </div>
 
           <div>
             <label>State</label>
-            <select name="state">
+            <select name="state" id="stateSelect">
+              <option value="">-- Select state --</option>
               <option>Madhya Pradesh</option>
               <option>Uttarakhand</option>
               <option>Rajasthan</option>
@@ -150,31 +61,39 @@
               <option>Odisha</option>
               <option>Himachal Pradesh</option>
             </select>
+            <small id="stateHint" class="muted">Choose state to see valid lat/lon range (based on dataset).</small>
+          </div>
+
+          <div>
+            <label>Latitude</label>
+            <input type="number" step="0.0001" id="latitude" name="latitude" placeholder="e.g. 23.0000" />
+            <div class="row" style="margin-top:6px;">
+              <button type="button" class="inline-btn" onclick="fillRandomLocation()">Fill random in-range</button>
+              <div style="flex:1" class="helper muted" id="latlonRangeText"></div>
+            </div>
+          </div>
+
+          <div>
+            <label>Longitude</label>
+            <input type="number" step="0.0001" id="longitude" name="longitude" placeholder="e.g. 78.0000" />
+            <small class="muted">Latitude/Longitude are used for validation only and not submitted to the model.</small>
           </div>
 
           <div>
             <label>Time of Day</label>
-            <select name="time_of_day">
-              <option>Morning</option>
-              <option>Afternoon</option>
-              <option>Night</option>
-            </select>
+            <select name="time_of_day"><option>Morning</option><option>Afternoon</option><option>Night</option></select>
+            <small class="muted">Risk often higher at night</small>
           </div>
 
           <div>
             <label>Terrain Type</label>
-            <select name="terrain_type">
-              <option>Forest</option>
-              <option>Grassland</option>
-              <option>Wetland</option>
-              <option>Mountain</option>
-              <option>Scrub</option>
-            </select>
+            <select name="terrain_type"><option>Forest</option><option>Grassland</option><option>Wetland</option><option>Mountain</option><option>Scrub</option></select>
           </div>
 
           <div>
             <label>Distance to Village (km)</label>
             <input type="number" step="0.1" name="proximity_to_village_km" value="3" />
+            <small class="muted">Closer villages → higher risk</small>
           </div>
 
           <div>
@@ -184,18 +103,12 @@
 
           <div>
             <label>Patrol in Last 24 Hours</label>
-            <select name="patrol_presence_last_24h">
-              <option value="1">Yes</option>
-              <option value="0">No</option>
-            </select>
+            <select name="patrol_presence_last_24h"><option value="1">Yes</option><option value="0">No</option></select>
           </div>
 
           <div>
             <label>Camera Trap Present</label>
-            <select name="camera_trap_present">
-              <option value="1">Yes</option>
-              <option value="0">No</option>
-            </select>
+            <select name="camera_trap_present"><option value="1">Yes</option><option value="0">No</option></select>
           </div>
 
           <div>
@@ -220,64 +133,174 @@
 
         </div>
 
-        <button type="button" onclick="predictRisk()">Predict Risk</button>
+        <div id="errorBox" class="error" style="display:none"></div>
+        <button id="predictBtn" type="button" onclick="predictRisk()">Predict Risk</button>
       </form>
 
       <div id="result" class="result"></div>
     </div>
 
-    <div class="footer">
-      ML-powered anti-poaching decision support • Academic prototype
-    </div>
+    <div class="footer">ML-powered anti-poaching decision support • Academic prototype</div>
   </div>
 
-  <script>
-    async function predictRisk() {
-      const form = document.getElementById("riskForm");
-      const data = Object.fromEntries(new FormData(form).entries());
+<script>
+/*
+  State -> lat/lon ranges (approximate, based on typical boundaries and dataset regions)
+  Ranges are inclusive: [minLat, maxLat], [minLon, maxLon]
+  These are intentionally conservative to match dataset sampling areas.
+*/
+const stateRanges = {
+  "Madhya Pradesh": {lat:[20.5,26.9], lon:[74.0,82.0]},
+  "Uttarakhand":    {lat:[28.0,31.3], lon:[77.5,81.0]},
+  "Rajasthan":      {lat:[23.3,30.1], lon:[69.3,78.0]},
+  "West Bengal":    {lat:[21.5,27.2], lon:[87.9,89.9]}, // focused on wildlife areas
+  "Assam":          {lat:[24.0,28.0], lon:[89.5,96.0]},
+  "Kerala":         {lat:[8.0,12.7],  lon:[74.5,77.8]},
+  "Gujarat":        {lat:[20.0,24.7], lon:[68.1,74.4]},
+  "Karnataka":      {lat:[11.5,18.5], lon:[74.0,78.5]},
+  "Odisha":         {lat:[17.5,22.5], lon:[81.0,87.5]},
+  "Himachal Pradesh": {lat:[30.3,33.5], lon:[75.0,79.5]}
+};
 
-      [
-        "proximity_to_village_km",
-        "distance_to_road_km",
-        "past_poaching_incidents",
-        "poacher_signs_count",
-        "market_value_usd",
-        "community_awareness_score",
-        "patrol_presence_last_24h",
-        "camera_trap_present"
-      ].forEach(k => data[k] = Number(data[k]));
+const backendUrl = "https://anti-poaching-project.onrender.com/predict"; // ensure HTTPS
 
-      const resBox = document.getElementById("result");
-      resBox.style.display = "none";
+const stateSelect = document.getElementById("stateSelect");
+const latInput = document.getElementById("latitude");
+const lonInput = document.getElementById("longitude");
+const rangeText = document.getElementById("latlonRangeText");
+const stateHint = document.getElementById("stateHint");
+const errorBox = document.getElementById("errorBox");
+const resultBox = document.getElementById("result");
 
-      try {
-        const response = await fetch(
-          "https://anti-poaching-project.onrender.com/predict",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-          }
-        );
+stateSelect.addEventListener("change", () => {
+  const s = stateSelect.value;
+  if (!s || !stateRanges[s]) {
+    rangeText.textContent = "";
+    stateHint.textContent = "Choose state to see valid lat/lon range (based on dataset).";
+    return;
+  }
+  const r = stateRanges[s];
+  rangeText.textContent = `Lat range: ${r.lat[0].toFixed(4)} → ${r.lat[1].toFixed(4)} ; Lon range: ${r.lon[0].toFixed(4)} → ${r.lon[1].toFixed(4)}`;
+  stateHint.textContent = `Lat/lon shown for ${s}. We use these ranges to validate input (not submitted to model).`;
+});
 
-        if (!response.ok) {
-          throw new Error("Backend error");
-        }
+function fillRandomLocation(){
+  const s = stateSelect.value;
+  if (!s || !stateRanges[s]) {
+    alert("Select a state first to fill a random lat/lon in-range.");
+    return;
+  }
+  const r = stateRanges[s];
+  const lat = (Math.random() * (r.lat[1]-r.lat[0]) + r.lat[0]).toFixed(6);
+  const lon = (Math.random() * (r.lon[1]-r.lon[0]) + r.lon[0]).toFixed(6);
+  latInput.value = lat;
+  lonInput.value = lon;
+}
 
-        const result = await response.json();
-        const risk = result.poaching_risk_score;
+function showError(msg){
+  errorBox.style.display = "block";
+  errorBox.textContent = msg;
+}
 
-        resBox.className = "result " + (risk >= 0.5 ? "high" : "low");
-        resBox.innerHTML = `
-          <strong>Risk Score:</strong> ${risk}<br/>
-          <strong>Prediction:</strong> ${risk >= 0.5 ? "HIGH RISK" : "LOW RISK"}
-        `;
-        resBox.style.display = "block";
+function clearError(){
+  errorBox.style.display = "none";
+  errorBox.textContent = "";
+}
 
-      } catch (err) {
-        alert("Prediction failed. Backend may be sleeping — refresh and try again.");
-      }
+function showResult(html, high=false){
+  resultBox.style.display = "block";
+  resultBox.className = "result " + (high ? "high":"low");
+  resultBox.innerHTML = html;
+}
+
+/* Validate lat/lon are numeric and fall within chosen state's range.
+   Returns true if valid, false otherwise (and shows error).
+*/
+function validateLatLon(){
+  const s = stateSelect.value;
+  if (!s) { showError("Please select a state."); return false; }
+  const lat = Number(latInput.value);
+  const lon = Number(lonInput.value);
+  if (!isFinite(lat) || !isFinite(lon)) { showError("Please enter numeric latitude and longitude."); return false; }
+  const r = stateRanges[s];
+  if (!r) { showError("State ranges are not available."); return false; }
+  if (lat < r.lat[0] || lat > r.lat[1] || lon < r.lon[0] || lon > r.lon[1]) {
+    showError(`Latitude/longitude outside typical ${s} range. Lat must be ${r.lat[0]}–${r.lat[1]}. Lon must be ${r.lon[0]}–${r.lon[1]}.`);
+    return false;
+  }
+  clearError();
+  return true;
+}
+
+/* Main prediction: validate lat/lon, then build payload using only the model's expected fields.
+   We do NOT send latitude/longitude to the backend (maintains API schema compatibility).
+*/
+async function predictRisk(){
+  clearError();
+  resultBox.style.display = "none";
+
+  // Validate lat/lon first
+  if (!validateLatLon()) return;
+
+  const form = document.getElementById("riskForm");
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  // Convert numeric fields
+  ["proximity_to_village_km","distance_to_road_km","past_poaching_incidents","poacher_signs_count","market_value_usd","community_awareness_score","patrol_presence_last_24h","camera_trap_present"]
+    .forEach(k => { if (data[k] !== undefined) data[k] = Number(data[k]); });
+
+  // Backend expects 12 fields (we intentionally DON'T include latitude/longitude here)
+  const payload = {
+    species: data.species,
+    state: data.state,
+    time_of_day: data.time_of_day,
+    terrain_type: data.terrain_type,
+    proximity_to_village_km: data.proximity_to_village_km,
+    distance_to_road_km: data.distance_to_road_km,
+    past_poaching_incidents: data.past_poaching_incidents,
+    poacher_signs_count: data.poacher_signs_count,
+    market_value_usd: data.market_value_usd,
+    community_awareness_score: data.community_awareness_score,
+    patrol_presence_last_24h: data.patrol_presence_last_24h,
+    camera_trap_present: data.camera_trap_present
+  };
+
+  // Show a small waiting state
+  const btn = document.getElementById("predictBtn");
+  const oldText = btn.textContent;
+  btn.textContent = "Predicting...";
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(backendUrl, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+
+    if (!resp.ok) {
+      // try to read response text for debugging
+      let txt = await resp.text();
+      throw new Error(txt || `Server returned ${resp.status}`);
     }
-  </script>
+
+    const result = await resp.json();
+    const risk = Number(result.poaching_risk_score);
+    const high = risk >= 0.5;
+    showResult(
+      `<strong>Risk Score:</strong> ${risk.toFixed(3)}<br/><strong>Prediction:</strong> ${high ? "HIGH RISK":"LOW RISK"}<br/><small class="muted">Model version: ${result.model_version || "v1"}</small>`,
+      high
+    );
+
+  } catch (err) {
+    console.error("Prediction error:", err);
+    // Friendly message for the user — backend may be sleeping or CORS blocked
+    showError("Prediction failed. Backend may be temporarily unreachable. Try refreshing or use the API docs at /docs.");
+  } finally {
+    btn.textContent = oldText;
+    btn.disabled = false;
+  }
+}
+</script>
 </body>
 </html>
